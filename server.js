@@ -25,7 +25,7 @@ const Jewelry = require('./models/jewelry');
 
 // Create Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 
 // MongoDB Connection String - replace with your own connection string
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/jewelry_store';
