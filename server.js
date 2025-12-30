@@ -91,8 +91,7 @@ const upload = multer({
 
 // WhatsApp contact numbers
 const whatsappContacts = [
-    { name: "Sales Team 1", number: "8080577408" },
-    { name: "Sales Team 2", number: "6280362243" }
+    { name: "Sales Team", number: "6280362243" }
 ];
 
 // API Routes
