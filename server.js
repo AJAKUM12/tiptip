@@ -13,7 +13,7 @@ try {
     const Stripe = require('stripe');
     // Initialize Stripe with your secret key, replace with your own key or use environment variable
     
-    stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+    stripe = Stripe('sk_test_51Sk3HsFwsGd8VfOn31x9FlzgLrIzxKgi3sNbyQZ2t1KGOWAtVb4PXtzjvbW5qhKI58ld7VNvUATcQDusywjQolDr009yNwA0AK');
     console.log('Stripe initialized');
     
 } catch (e) {
