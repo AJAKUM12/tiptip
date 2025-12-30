@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jewel Collection - Premium Jewelry Store</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="logo">
+                <i class="fas fa-gem"></i>
+                tiptop Jewels
+            </h1>
+            <nav class="nav">
+                <a href="#" class="nav-link active">All Items</a>
+                <a href="#" class="nav-link">Rings</a>
+                <a href="#" class="nav-link">Necklaces</a>
+                <a href="#" class="nav-link">Earrings</a>
+                <a href="#" class="nav-link">Bracelets</a>
+            </nav>
+
+            <!-- Cart button -->
+            <button id="cartButton" class="cart-btn" title="View cart" style="margin-left:12px;">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cartCount" style="background:#e74c3c;color:#fff;padding:2px 6px;border-radius:12px;font-size:12px;margin-left:6px;">0</span>
+            </button>
+        </header>
+
+        <!-- Search and Filter -->
+        <div class="search-filter">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search jewelry...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-category="all">All</button>
+                <button class="filter-btn" data-category="ring">Rings</button>
+                <button class="filter-btn" data-category="necklace">Necklaces</button>
+                <button class="filter-btn" data-category="earring">Earrings</button>
+                <button class="filter-btn" data-category="bracelet">Bracelets</button>
+            </div>
+        </div>
+
+        <!-- Jewelry Grid -->
+        <div class="jewelry-grid" id="jewelryGrid">
+            <!-- Items will be dynamically loaded here -->
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- No Results Message -->
+        <div class="no-results" id="noResults" style="display: none;">
+            <i class="fas fa-search"></i>
+            <h3>No jewelry found</h3>
+            <p>Try adjusting your search or filter criteria</p>
+        </div>
+    </div>
+
+    <!-- Item Detail Modal -->
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="modal-body">
+                <div class="modal-image">
+                    <img id="modalImage" src="" alt="">
+                </div>
+                <div class="modal-info">
+                    <h2 id="modalTitle"></h2>
+                    <p class="modal-category" id="modalCategory"></p>
+                    <p class="modal-price" id="modalPrice"></p>
+                    <p class="modal-description" id="modalDescription"></p>
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" id="shareWhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                            Share on WhatsApp
+                        </button>
+                        <button class="btn btn-secondary" id="copyLink">
+                            <i class="fas fa-copy"></i>
+                            Copy Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Modal -->
+    <div class="modal" id="cartModal" style="display:none;">
+        <div class="modal-content" style="max-width:700px;">
+            <button class="modal-close" id="cartClose"><i class="fas fa-times"></i></button>
+            <div class="modal-body">
+                <h2>Your Cart</h2>
+                <div id="cartItems"></div>
+                <div style="margin-top:16px; text-align:right;">
+                    <strong>Total: </strong><span id="cartTotal">0</span>
+                    <button id="checkoutBtn" class="btn btn-primary" style="margin-left:12px;">Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Link copied to clipboard!</span>
+    </div>
+
+    <!-- Load the data file first -->
+    <script src="data.js"></script>
+    
+    <!-- Then load the main script -->
+    <script src="script.js"></script>
+
+    <!-- Cart client-side logic (localStorage + checkout) -->
+    <script>
+        // Simple cart implementation
+        const CART_KEY = 'tp_cart_v1';
+        function getCart() {
+            try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch(e) { return []; }
+        }
+        function saveCart(cart){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); updateCartCount(); }
+        function updateCartCount(){
+            const count = getCart().reduce((s,i)=>s+(i.quantity||0),0);
+            document.getElementById('cartCount').textContent = count;
+        }
+
+        // Clear cart and update UI
+        function clearCart() {
+            try { localStorage.removeItem(CART_KEY); } catch (e) {}
+            updateCartCount();
+            if (typeof renderCart === 'function') renderCart();
+        }
+
+        // On page load handle checkout result (?checkout=success or ?checkout=cancel)
+        (function handleCheckoutResult(){
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const result = params.get('checkout');
+                if (!result) return;
+                if (result === 'success') {
+                    clearCart();
+                    if (typeof showToast === 'function') showToast('Payment successful — cart cleared');
+                } else if (result === 'cancel') {
+                    if (typeof showToast === 'function') showToast('Payment cancelled');
+                }
+                // remove checkout param without reloading
+                params.delete('checkout');
+                const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '') + window.location.hash;
+                history.replaceState(null, '', newUrl);
+            } catch (e) {
+                console.error('checkout result handler failed', e);
+            }
+        })();
+
+        // Add to cart via delegation (works if product render uses button.add-to-cart data-id)
+        document.addEventListener('click', function(e){
+            const btn = e.target.closest('.add-to-cart, [data-action="add-to-cart"]');
+            if (!btn) return;
+            const id = btn.dataset.id || btn.getAttribute('data-id');
+            if (!id) return;
+            const product = (window.jewelryData || []).find(p => String(p.id) === String(id));
+            if (!product) return;
+            const cart = getCart();
+            const existing = cart.find(i => String(i.id) === String(id));
+            if (existing) { existing.quantity = (existing.quantity || 1) + 1; }
+            else { cart.push({ id: product.id, title: product.title || product.name || 'Item', price: Number(product.price) || 0, image: product.image || product.filePath || product.img || '', quantity: 1 }); }
+            saveCart(cart);
+
+            // Short update: notify user and refresh cart list if it's open
+            if (typeof showToast === 'function') showToast('Added to cart');
+            if (typeof renderCart === 'function' && document.getElementById('cartModal').style.display === 'block') {
+                renderCart();
+            }
+        });
+
+        // Cart modal controls
+        const cartButton = document.getElementById('cartButton');
+        const cartModal = document.getElementById('cartModal');
+        const cartClose = document.getElementById('cartClose');
+        const cartItemsEl = document.getElementById('cartItems');
+        const cartTotalEl = document.getElementById('cartTotal');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+
+        cartButton.addEventListener('click', () => { renderCart(); cartModal.style.display = 'block'; });
+        cartClose.addEventListener('click', () => { cartModal.style.display = 'none'; });
+
+        function renderCart(){
+            const cart = getCart();
+            cartItemsEl.innerHTML = '';
+            if (cart.length === 0) { cartItemsEl.innerHTML = '<p>Your cart is empty.</p>'; cartTotalEl.textContent = '0'; return; }
+            let total = 0;
+            cart.forEach(item => {
+                total += (Number(item.price) || 0) * (item.quantity || 1);
+                const row = document.createElement('div');
+                row.style.display='flex';
+                row.style.alignItems='center';
+                row.style.justifyContent='space-between';
+                row.style.padding='8px 0';
+                row.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <img src="${(item.image||'').replace(/^\.\//,'')}" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:6px;">
+                        <div>
+                            <div style="font-weight:600;">${item.title}</div>
+                            <div style="font-size:13px;color:#666;">₹${item.price} x ${item.quantity}</div>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="qty-decr" data-id="${item.id}" style="margin-right:6px;">-</button>
+                        <button class="qty-incr" data-id="${item.id}" style="margin-right:12px;">+</button>
+                        <button class="remove-item" data-id="${item.id}">Remove</button>
+                    </div>
+                `;
+                cartItemsEl.appendChild(row);
+            });
+            cartTotalEl.textContent = '₹' + total.toFixed(2);
+        }
+
+        // Quantity and remove handlers
+        cartItemsEl.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (!id) return;
+            const cart = getCart();
+            const idx = cart.findIndex(i => String(i.id) === String(id));
+            if (idx === -1) return;
+            if (e.target.classList.contains('qty-incr')) cart[idx].quantity = (cart[idx].quantity || 1) + 1;
+            else if (e.target.classList.contains('qty-decr')) { cart[idx].quantity = Math.max(1, (cart[idx].quantity || 1) - 1); }
+            else if (e.target.classList.contains('remove-item')) cart.splice(idx,1);
+            saveCart(cart);
+            renderCart();
+        });
+
+        // Checkout - send cart to server to create a Stripe Checkout session
+        checkoutBtn.addEventListener('click', async () => {
+            const cart = getCart();
+            if (cart.length === 0) return alert('Cart is empty');
+            // Prepare items for server
+            const items = cart.map(i => ({ id: i.id, title: i.title, price: i.price, quantity: i.quantity, image: i.image }));
+            try {
+                checkoutBtn.disabled = true;
+                checkoutBtn.textContent = 'Redirecting...';
+                const res = await fetch('/api/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items })
+                });
+                const data = await res.json();
+                if (data && data.url) {
+                    // Redirect to Stripe Checkout
+                    window.location = data.url;
+                } else {
+                    alert((data && data.error) ? data.error : 'Failed to start checkout');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Checkout failed');
+            } finally {
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = 'Checkout';
+            }
+        });
+
+        // Initialize count on load
+        updateCartCount();
+
+        // Listen for updates dispatched from script.js when item is added
+        window.addEventListener('cart-updated', () => {
+            updateCartCount();
+            if (document.getElementById('cartModal').style.display === 'block') {
+                renderCart();
+            }
+            if (typeof showToast === 'function') showToast('Added to cart');
+        });
+    </script>
+
+    <!-- Add a hidden admin link in the footer -->
+    <footer>
+        <!-- Your existing footer content -->
+        <div style="text-align: center; margin-top: 20px; font-size: 12px;">
+            <a href="admin.html" style="color: #999; text-decoration: none;">Admin</a>
+        </div>
+    </footer>
+</body>
+</html>
